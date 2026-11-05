@@ -1,166 +1,234 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="pt-PT">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Programador de Vídeos YouTube</title>
-  <!-- Tailwind CSS -->
+  <title>Programador de Vídeos do YouTube - Auto Switch</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    /* Custom Scrollbar and Keyframe Animations */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    
     .active-card {
       border-color: #ef4444 !important;
+      background-color: rgba(239, 68, 68, 0.08) !important;
       box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .pulse-live {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+
+    /* Toast Notification Slide Animation */
+    #switchToast {
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
 
-  <!-- Toast Notification -->
-  <div id="toast" class="fixed top-20 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-red-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
-    <i data-lucide="radio" class="w-5 h-5 animate-pulse"></i>
-    <span id="toastMsg" class="text-sm font-semibold">Mudança de canal programada!</span>
-  </div>
-
-  <!-- Header -->
-  <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+  <header class="bg-slate-900 border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+      
+      <!-- Logo & Title -->
       <div class="flex items-center gap-3">
-        <div class="bg-red-600 p-2.5 rounded-xl text-white shadow-lg shadow-red-600/30">
+        <div class="bg-gradient-to-tr from-red-600 to-rose-500 p-2.5 rounded-xl text-white shadow-lg shadow-red-600/30 flex items-center justify-center">
           <i data-lucide="tv" class="w-6 h-6"></i>
         </div>
         <div>
-          <h1 class="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+          <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
             Programador de Vídeos YouTube
           </h1>
           <p class="text-xs text-slate-400">Troca Automática de Canais em Tempo Real</p>
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-3 bg-slate-950 px-4 py-2 rounded-2xl border border-slate-800">
-        <!-- Switch Troca Automática -->
-        <button id="toggleAutoSwitchBtn" onclick="toggleAutoSwitch()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 hover:bg-emerald-900/50 transition">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping" id="autoSwitchPing"></span>
-          <span id="autoSwitchStatusText">Troca Automática: LIGADA</span>
+      <!-- Controls & Live Clock -->
+      <div class="flex flex-wrap items-center justify-center sm:justify-end gap-3 w-full sm:w-auto">
+        
+        <!-- Toggle Auto Switch -->
+        <button id="toggleAutoSwitchBtn" onclick="toggleAutoSwitch()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 px-3 py-1.5 rounded-xl text-xs font-semibold transition group">
+          <div id="autoSwitchDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+          <span id="autoSwitchLabel" class="text-slate-200">Troca Automática: <strong class="text-emerald-400">LIGADA</strong></span>
         </button>
 
-        <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
-
-        <!-- Relógio -->
-        <div class="flex items-center gap-2 text-red-500 font-mono font-bold text-base" id="liveClock">
+        <!-- Digital Clock -->
+        <div class="flex items-center gap-2 bg-slate-950/80 px-3.5 py-1.5 rounded-xl border border-slate-800 text-red-500 font-mono font-bold text-sm shadow-inner">
           <i data-lucide="clock" class="w-4 h-4"></i>
-          <span>00:00:00</span>
+          <span id="liveClock">00:00:00</span>
         </div>
 
-        <button onclick="openModal()" class="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition ml-2">
+        <!-- Add New Block Button -->
+        <button onclick="openModal()" class="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-md shadow-red-600/20 transition">
           <i data-lucide="plus" class="w-4 h-4"></i>
-          Novo Bloco
+          <span>Novo Bloco</span>
         </button>
+
       </div>
     </div>
   </header>
 
-  <!-- Principal -->
   <main class="max-w-7xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
     
-    <!-- Player Secção -->
+    <!-- Player and Current Program Information -->
     <section class="lg:col-span-2 flex flex-col gap-4">
-      <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl flex flex-col">
+      
+      <!-- Video Player Frame Container -->
+      <div class="bg-slate-900 rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl relative flex flex-col">
         
-        <!-- Frame do Player -->
-        <div class="relative w-full aspect-video bg-black" id="playerWrapper">
-          <iframe id="ytIframe" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <!-- Auto Switch Live Notification Toast -->
+        <div id="switchToast" class="absolute top-4 left-4 right-4 z-30 transform -translate-y-20 opacity-0 pointer-events-none bg-red-600/90 text-white px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md border border-red-400/30 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-white/20 rounded-lg">
+              <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+              <p class="text-xs uppercase tracking-wider font-extrabold text-red-100">Troca Automática Ativada!</p>
+              <p class="text-xs font-medium text-white" id="toastMessage">Iniciando novo bloco de programação...</p>
+            </div>
+          </div>
+          <span class="text-[10px] bg-black/30 px-2 py-1 rounded font-mono">AO VIVO</span>
         </div>
 
-        <!-- Informação do Canal -->
-        <div class="p-4 md:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border-t border-slate-800">
-          <div>
-            <div class="flex items-center gap-2 mb-1.5">
-              <span id="liveBadge" class="hidden bg-red-600 text-white text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> NO AR
-              </span>
-              <span id="currentTimeBadge" class="text-xs text-slate-400 font-medium">--:--</span>
+        <!-- Player Frame -->
+        <div class="relative w-full aspect-video bg-black flex items-center justify-center overflow-hidden" id="playerContainer">
+          
+          <div id="playerPlaceholder" class="text-center p-6 flex flex-col items-center justify-center">
+            <div class="w-16 h-16 rounded-full bg-slate-800/80 flex items-center justify-center mb-3 text-slate-500 border border-slate-700/50">
+              <i data-lucide="youtube" class="w-8 h-8"></i>
             </div>
-            <h2 id="currentTitle" class="text-lg font-bold text-white">A carregar canal...</h2>
-            <p id="currentChannelHandle" class="text-xs text-slate-400 mt-0.5">@canal</p>
+            <p class="text-slate-300 text-sm font-medium">Nenhum programa ativo neste momento.</p>
+            <p class="text-slate-500 text-xs mt-1">Selecione um bloco da lista ou aguarde o início do próximo horário.</p>
           </div>
 
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <a id="btnDirectVideo" href="#" target="_blank" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shadow-lg shadow-red-600/20">
+          <iframe id="ytIframe" class="w-full h-full hidden" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+
+        <!-- On Air Information Bar -->
+        <div class="p-4 md:p-5 bg-slate-900 border-t border-slate-800/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div class="flex flex-col gap-1.5 max-w-full overflow-hidden">
+            
+            <div class="flex flex-wrap items-center gap-2">
+              <!-- Live Indicator Badge -->
+              <span id="liveBadge" class="hidden items-center gap-1.5 bg-red-600 text-white text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-0.5 rounded-full shadow-sm shadow-red-600/50 pulse-live">
+                <span class="w-1.5 h-1.5 rounded-full bg-white"></span> NO AR
+              </span>
+
+              <!-- Status & Time Badge -->
+              <span id="currentCategoryBadge" class="bg-slate-800 text-slate-300 text-xs px-2.5 py-0.5 rounded-md font-medium border border-slate-700/50">Aguardando</span>
+              <span id="currentTimeBadge" class="text-xs text-slate-400 flex items-center gap-1 font-mono">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-500"></i> --:-- - --:--
+              </span>
+            </div>
+
+            <h2 id="currentTitle" class="text-base md:text-lg font-bold text-slate-100 truncate">Nenhum programa selecionado</h2>
+            <p id="currentChannelHandle" class="text-xs text-slate-400">Canal: -</p>
+          </div>
+
+          <!-- Direct Link Buttons -->
+          <div class="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+            <a id="btnDirectVideo" href="#" target="_blank" class="hidden flex-1 md:flex-none flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-md shadow-red-600/20">
               <i data-lucide="play-circle" class="w-4 h-4"></i>
-              Abrir no YouTube
+              Vídeo Recente Direto
+            </a>
+            <a id="btnOpenChannel" href="#" target="_blank" class="hidden flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold transition border border-slate-700">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+              Canal
             </a>
           </div>
         </div>
 
       </div>
+
     </section>
 
-    <!-- Lista da Programação -->
+    <!-- Schedule Sidebar -->
     <section class="flex flex-col gap-4">
-      <div class="flex justify-between items-center px-1">
-        <h3 class="text-base font-bold flex items-center gap-2 text-slate-200">
+      <div class="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-800/80">
+        <h3 class="text-sm font-bold flex items-center gap-2 text-slate-200">
           <i data-lucide="calendar" class="w-4 h-4 text-red-500"></i>
           Programação de Hoje
         </h3>
-        <span class="text-xs text-slate-500" id="totalPrograms">0 blocos</span>
+        <span class="text-xs text-slate-400 font-mono bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800" id="totalPrograms">0 blocos</span>
       </div>
 
-      <div id="programList" class="flex flex-col gap-3 max-h-[680px] overflow-y-auto pr-1">
-        <!-- Cards dinâmicos -->
+      <!-- Scrollable List of Schedule Cards -->
+      <div id="programList" class="flex flex-col gap-3 max-h-[640px] overflow-y-auto pr-1">
+        <!-- Dynamically rendered via JS -->
       </div>
     </section>
 
   </main>
 
-  <!-- Modal Adicionar/Editar -->
-  <div id="modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-      <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+      
+      <!-- Close Button -->
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
 
-      <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2" id="modalTitle">
+      <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2" id="modalTitle">
         <i data-lucide="plus-circle" class="text-red-500 w-5 h-5"></i>
-        Adicionar Novo Horário
+        Adicionar Bloco de Horário
       </h3>
 
       <form id="programForm" onsubmit="saveProgram(event)" class="flex flex-col gap-4">
         <input type="hidden" id="programId">
 
         <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1">Título / Nome do Bloco</label>
-          <input type="text" id="inputTitle" placeholder="Ex: Reflexão da Manhã" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+          <label class="block text-xs font-medium text-slate-300 mb-1">Título do Bloco / Gênero</label>
+          <input type="text" id="inputTitle" placeholder="Ex: Notícias da Manhã" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-red-500">
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Horário Início</label>
-            <input type="time" id="inputStartTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+            <label class="block text-xs font-medium text-slate-300 mb-1">Início (HH:MM)</label>
+            <input type="time" id="inputStartTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-red-500 font-mono">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Horário Fim</label>
-            <input type="time" id="inputEndTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+            <label class="block text-xs font-medium text-slate-300 mb-1">Fim (HH:MM)</label>
+            <input type="time" id="inputEndTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-red-500 font-mono">
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1">Handle do Canal ou ID/Link do Vídeo</label>
-          <input type="text" id="inputHandle" placeholder="reflexaominuto OU link do vídeo" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
-          <p class="text-[11px] text-slate-500 mt-1">Pode colocar o handle (ex: <b>reflexaominuto</b>), o ID do vídeo ou o link do YouTube direto.</p>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Handle do Canal no YouTube</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-2.5 text-slate-500 text-sm font-bold">@</span>
+            <input type="text" id="inputHandle" placeholder="reflexaominuto" required class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3.5 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Apenas o identificador sem o símbolo @ (ex: BBCNewsBrasil ou reflexaominuto)</p>
         </div>
 
-        <div class="flex justify-end gap-2 mt-2">
-          <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold">
+        <div class="flex justify-end gap-2 mt-3">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold">
-            Guardar Programação
+          <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold transition shadow-md shadow-red-600/20">
+            Salvar Programação
           </button>
         </div>
       </form>
@@ -168,52 +236,102 @@
   </div>
 
   <script>
+    // Default Schedule Configuration
     const defaultPrograms = [
       { id: '1', title: 'Espiritualidade & Reflexão', startTime: '06:00', endTime: '07:00', handle: 'reflexaominuto' },
       { id: '2', title: 'Notícias Internacionais', startTime: '07:00', endTime: '08:30', handle: 'BBCNewsBrasil' },
       { id: '3', title: 'Ciência & Tecnologia', startTime: '12:00', endTime: '13:00', handle: 'AtilaIamarino' }
     ];
 
+    // State Variables
     let schedule = JSON.parse(localStorage.getItem('yt_schedule')) || defaultPrograms;
     let activeProgramId = null;
     let autoSwitchEnabled = true;
+    let lastExecutedMinute = ""; // Track minute to avoid duplicate auto-switches in the same minute
 
+    // Initialize Application on Page Load
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
       updateClock();
-      setInterval(updateClock, 1000);
+      setInterval(updateClock, 1000); // Check every second
       renderSchedule();
-      checkCurrentTimeSlot();
+      checkScheduleAndAutoSwitch(true); // Initial load check
     });
 
+    // Real-Time Clock & Auto Switch Logic
     function updateClock() {
       const now = new Date();
-      const timeStr = now.toLocaleTimeString('pt-PT');
-      document.getElementById('liveClock').querySelector('span').innerText = timeStr;
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const currentFormattedTime = `${hours}:${minutes}:${seconds}`;
+      const currentMinuteStr = `${hours}:${minutes}`;
 
-      if (autoSwitchEnabled) {
-        checkCurrentTimeSlot();
+      // Update digital clock UI
+      document.getElementById('liveClock').innerText = currentFormattedTime;
+
+      // Check auto switch on every new minute
+      if (currentMinuteStr !== lastExecutedMinute) {
+        lastExecutedMinute = currentMinuteStr;
+        checkScheduleAndAutoSwitch(false);
       }
     }
 
+    // Toggle Auto Switch Mode
     function toggleAutoSwitch() {
       autoSwitchEnabled = !autoSwitchEnabled;
+      const dot = document.getElementById('autoSwitchDot');
+      const label = document.getElementById('autoSwitchLabel');
       const btn = document.getElementById('toggleAutoSwitchBtn');
-      const ping = document.getElementById('autoSwitchPing');
-      const txt = document.getElementById('autoSwitchStatusText');
 
       if (autoSwitchEnabled) {
-        btn.className = "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 hover:bg-emerald-900/50 transition";
-        ping.className = "w-2 h-2 rounded-full bg-emerald-500 animate-ping";
-        txt.innerText = "Troca Automática: LIGADA";
-        checkCurrentTimeSlot();
+        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]";
+        label.innerHTML = 'Troca Automática: <strong class="text-emerald-400">LIGADA</strong>';
+        btn.classList.remove('opacity-75');
+        showToast("Troca automática ATIVADA. O sistema mudará de canal no próximo bloco.");
+        checkScheduleAndAutoSwitch(false);
       } else {
-        btn.className = "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition";
-        ping.className = "w-2 h-2 rounded-full bg-slate-500";
-        txt.innerText = "Troca Automática: DESLIGADA";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]";
+        label.innerHTML = 'Troca Automática: <strong class="text-amber-400">DESLIGADA</strong>';
+        btn.classList.add('opacity-75');
+        showToast("Troca automática DESLIGADA. O canal atual continuará sem interrupções.");
       }
     }
 
+    // Schedule Check Logic
+    function checkScheduleAndAutoSwitch(isInitialLoad) {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+      let currentMatchingBlock = null;
+
+      // Find if any block corresponds to current time
+      schedule.forEach(item => {
+        const [startH, startM] = item.startTime.split(':').map(Number);
+        const [endH, endM] = item.endTime.split(':').map(Number);
+        
+        const startTotal = startH * 60 + startM;
+        const endTotal = endH * 60 + endM;
+
+        if (currentMinutes >= startTotal && currentMinutes < endTotal) {
+          currentMatchingBlock = item;
+        }
+      });
+
+      if (currentMatchingBlock) {
+        // Switch if active program is different or initial load
+        if (activeProgramId !== currentMatchingBlock.id) {
+          if (autoSwitchEnabled || isInitialLoad) {
+            loadChannelVideo(currentMatchingBlock.id, !isInitialLoad);
+          }
+        }
+      } else if (isInitialLoad && schedule.length > 0) {
+        // Default to first item if no schedule is active right now
+        loadChannelVideo(schedule[0].id, false);
+      }
+    }
+
+    // Render Schedule List Cards
     function renderSchedule() {
       const list = document.getElementById('programList');
       list.innerHTML = '';
@@ -221,35 +339,51 @@
       schedule.sort((a, b) => a.startTime.localeCompare(b.startTime));
       document.getElementById('totalPrograms').innerText = `${schedule.length} bloco(s)`;
 
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
       schedule.forEach(item => {
-        const card = document.createElement('div');
+        const [startH, startM] = item.startTime.split(':').map(Number);
+        const [endH, endM] = item.endTime.split(':').map(Number);
+        const startTotal = startH * 60 + startM;
+        const endTotal = endH * 60 + endM;
+
+        const isCurrentlyOnAir = (currentMinutes >= startTotal && currentMinutes < endTotal);
         const isActive = item.id === activeProgramId;
 
-        card.className = `bg-slate-900 border ${isActive ? 'active-card bg-slate-900/90' : 'border-slate-800'} rounded-xl p-4 flex flex-col gap-3 transition hover:border-slate-700`;
+        const card = document.createElement('div');
+        card.className = `bg-slate-900 border ${isActive ? 'active-card' : 'border-slate-800/80'} rounded-xl p-3.5 flex flex-col gap-3 transition hover:border-slate-700 relative group`;
+        
         card.innerHTML = `
           <div class="flex justify-between items-start">
             <div>
-              <span class="text-xs font-semibold ${isActive ? 'text-red-400 bg-red-950/80 border-red-800' : 'text-slate-400 bg-slate-950 border-slate-800'} border px-2 py-0.5 rounded-md">
-                ${item.startTime} - ${item.endTime}
-              </span>
-              <h4 class="font-bold text-sm text-white mt-2">${item.title}</h4>
-              <p class="text-xs text-slate-400">${item.handle.startsWith('http') || item.handle.length === 11 ? 'Vídeo Direto' : '@' + item.handle.replace('@', '')}</p>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-mono font-semibold text-red-400 bg-red-950/60 border border-red-900/40 px-2 py-0.5 rounded-md">
+                  ${item.startTime} - ${item.endTime}
+                </span>
+                ${isCurrentlyOnAir ? `<span class="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">NO AR</span>` : ''}
+              </div>
+              <h4 class="font-bold text-sm text-white mt-1.5">${item.title}</h4>
+              <p class="text-xs text-slate-400">@${item.handle.replace('@', '')}</p>
             </div>
-            <div class="flex items-center gap-1">
-              <button onclick="editProgram('${item.id}')" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg">
+            
+            <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
+              <button onclick="editProgram('${item.id}')" title="Editar" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg">
                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
               </button>
-              <button onclick="deleteProgram('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg">
+              <button onclick="deleteProgram('${item.id}')" title="Excluir" class="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
               </button>
             </div>
           </div>
 
           <div class="flex gap-2">
-            <button onclick="selectProgram('${item.id}', true)" class="flex-1 ${isActive ? 'bg-red-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} text-xs py-2 rounded-xl font-medium flex items-center justify-center gap-1.5 transition">
-              <i data-lucide="${isActive ? 'radio' : 'play'}" class="w-3.5 h-3.5"></i> 
-              ${isActive ? 'Tocando Agora' : 'Sintonizar Canal'}
+            <button onclick="manualSelectProgram('${item.id}')" class="flex-1 ${isActive ? 'bg-red-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i> ${isActive ? 'Tocando Agora' : 'Sintonizar Canal'}
             </button>
+            <a href="https://www.youtube.com/@${item.handle.replace('@', '')}/videos" target="_blank" title="Abrir vídeos no YouTube" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center transition">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            </a>
           </div>
         `;
         list.appendChild(card);
@@ -258,135 +392,142 @@
       lucide.createIcons();
     }
 
-    // Extrai o ID do vídeo de um link ou devolve o próprio ID se já for válido
-    function extractVideoId(input) {
-      if (!input) return null;
-      input = input.trim();
-      
-      // Se for um link do YouTube (watch?v=... ou youtu.be/...)
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = input.match(regExp);
-
-      if (match && match[2].length === 11) {
-        return match[2];
-      }
-      
-      // Se já for diretamente um Video ID de 11 caracteres
-      if (input.length === 11 && !input.includes('@') && !input.includes('.')) {
-        return input;
-      }
-
-      return null;
+    // Manual Channel Selection
+    function manualSelectProgram(id) {
+      loadChannelVideo(id, false);
     }
 
-    // Consulta API pública e rápida sem CORS (Invidious) para obter o último vídeo do canal
-    async function fetchLatestVideoFromInvidious(handle) {
+    // Fetch Latest Channel Video via RSS / Proxy
+    async function fetchLatestVideo(handle) {
       const cleanHandle = handle.replace('@', '').trim();
+      
+      try {
+        const rssUrl = `https://www.youtube.com/feeds/videos.xml?user=${cleanHandle}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
+        
+        const response = await fetch(proxyUrl);
+        if (response.ok) {
+          const data = await response.json();
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(data.contents, "text/xml");
+          const entry = xml.querySelector("entry");
 
-      const instances = [
-        `https://inv.nadeko.net/api/v1/channels/handle/${cleanHandle}`,
-        `https://invidious.nerdvpn.de/api/v1/channels/handle/${cleanHandle}`
-      ];
-
-      for (const apiUrl of instances) {
-        try {
-          const res = await fetch(apiUrl);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.latestVideos && data.latestVideos.length > 0) {
-              return data.latestVideos[0].videoId;
+          if (entry) {
+            const videoId = entry.querySelector("videoId")?.textContent;
+            const title = entry.querySelector("title")?.textContent;
+            if (videoId) {
+              return { videoId, title };
             }
           }
-        } catch (e) {
-          console.warn("Erro ao contactar instância Invidious:", e);
         }
+      } catch (e) {
+        console.warn("Proxy RSS indisponível, utilizando rota direta de canal.");
       }
 
-      return null;
+      return { videoId: null, channelHandle: cleanHandle };
     }
 
-    async function selectProgram(id, forceUserSelect = false) {
-      if (activeProgramId === id && !forceUserSelect) return;
-
+    // Load Channel Video into Player
+    async function loadChannelVideo(id, triggeredByAutoSwitch = false) {
       activeProgramId = id;
       const item = schedule.find(p => p.id === id);
       if (!item) return;
 
       renderSchedule();
 
+      const cleanHandle = item.handle.replace('@', '');
+      
+      // Update UI Header details
       document.getElementById('currentTitle').innerText = item.title;
-      document.getElementById('currentTimeBadge').innerText = `${item.startTime} - ${item.endTime}`;
-      document.getElementById('liveBadge').classList.remove('hidden');
+      document.getElementById('currentCategoryBadge').innerText = "Carregando...";
+      document.getElementById('currentTimeBadge').innerHTML = `<i data-lucide="clock" class="w-3.5 h-3.5 text-slate-500"></i> ${item.startTime} - ${item.endTime}`;
+      document.getElementById('currentChannelHandle').innerText = `Canal Oficial: @${cleanHandle}`;
 
-      const btnDirect = document.getElementById('btnDirectVideo');
-      const iframe = document.getElementById('ytIframe');
-
-      // 1. Verifica se o utilizador forneceu um link ou ID de vídeo direto
-      let videoId = extractVideoId(item.handle);
-
-      if (!videoId) {
-        // 2. Se for um handle de canal, tenta ir buscar o último vídeo via API sem CORS
-        const cleanHandle = item.handle.replace('@', '');
-        document.getElementById('currentChannelHandle').innerText = `@${cleanHandle}`;
-        
-        videoId = await fetchLatestVideoFromInvidious(cleanHandle);
-      } else {
-        document.getElementById('currentChannelHandle').innerText = `ID: ${videoId}`;
-      }
-
-      if (videoId) {
-        btnDirect.href = `https://www.youtube.com/watch?v=${videoId}`;
-        iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
-      } else {
-        // Se falhar a busca do handle, redireciona o botão e carrega página informativa
-        const cleanHandle = item.handle.replace('@', '');
-        btnDirect.href = `https://www.youtube.com/@${cleanHandle}/videos`;
-        iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=PLrEnWoR732-BHrPp_C4J8A25IOfI9J6_Y`;
-      }
-
-      showToast(`Sintonizado: ${item.title}`);
-    }
-
-    function checkCurrentTimeSlot() {
+      // Live Badge Visibility Check
       const now = new Date();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const [startH, startM] = item.startTime.split(':').map(Number);
+      const [endH, endM] = item.endTime.split(':').map(Number);
+      const isCurrentlyOnAir = (currentMinutes >= (startH * 60 + startM) && currentMinutes < (endH * 60 + endM));
 
-      let currentSlot = null;
-
-      for (const item of schedule) {
-        const [sH, sM] = item.startTime.split(':').map(Number);
-        const [eH, eM] = item.endTime.split(':').map(Number);
-        const startTotal = sH * 60 + sM;
-        const endTotal = eH * 60 + eM;
-
-        if (currentMinutes >= startTotal && currentMinutes < endTotal) {
-          currentSlot = item;
-          break;
-        }
+      const liveBadge = document.getElementById('liveBadge');
+      if (isCurrentlyOnAir) {
+        liveBadge.classList.remove('hidden');
+        liveBadge.classList.add('flex');
+      } else {
+        liveBadge.classList.add('hidden');
+        liveBadge.classList.remove('flex');
       }
 
-      if (currentSlot) {
-        if (activeProgramId !== currentSlot.id) {
-          selectProgram(currentSlot.id);
-        }
-      } else if (!activeProgramId && schedule.length > 0) {
-        selectProgram(schedule[0].id);
+      // Update Channel Official Link Button
+      const btnChannel = document.getElementById('btnOpenChannel');
+      btnChannel.href = `https://www.youtube.com/@${cleanHandle}`;
+      btnChannel.classList.remove('hidden');
+
+      if (triggeredByAutoSwitch) {
+        showToast(`Troca Automática: Mudando para "@${cleanHandle}" (${item.title})`);
       }
+
+      // Fetch Video Data
+      const videoData = await fetchLatestVideo(cleanHandle);
+      const iframe = document.getElementById('ytIframe');
+      const placeholder = document.getElementById('playerPlaceholder');
+      const btnDirect = document.getElementById('btnDirectVideo');
+
+      if (videoData.videoId) {
+        // Direct Video Link Button
+        btnDirect.href = `https://www.youtube.com/watch?v=${videoData.videoId}`;
+        btnDirect.classList.remove('hidden');
+
+        // Configure Embed Iframe
+        const origin = encodeURIComponent(window.location.origin || 'http://localhost');
+        iframe.src = `https://www.youtube-nocookie.com/embed/${videoData.videoId}?autoplay=1&enablejsapi=1&origin=${origin}&rel=0`;
+        iframe.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        document.getElementById('currentCategoryBadge').innerText = "Vídeo Recente";
+      } else {
+        // Fallback Direct Channel Video Button
+        btnDirect.href = `https://www.youtube.com/@${cleanHandle}/videos`;
+        btnDirect.classList.remove('hidden');
+        
+        iframe.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        placeholder.innerHTML = `
+          <div class="w-16 h-16 rounded-full bg-red-600/10 flex items-center justify-center mb-3 text-red-500 border border-red-500/20">
+            <i data-lucide="play-circle" class="w-8 h-8"></i>
+          </div>
+          <p class="text-white font-semibold text-sm mb-1">Abrir Vídeo Recente no YouTube</p>
+          <p class="text-slate-400 text-xs mb-4 max-w-sm">Acesse o conteúdo mais novo publicado pelo canal @${cleanHandle}.</p>
+          <a href="https://www.youtube.com/@${cleanHandle}/videos" target="_blank" class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-md shadow-red-600/20">
+            <i data-lucide="external-link" class="w-4 h-4"></i> Assistir Vídeos Recentes de @${cleanHandle}
+          </a>
+        `;
+        document.getElementById('currentCategoryBadge').innerText = "Acesso Direto";
+      }
+
+      lucide.createIcons();
     }
 
+    // Display Notification Toast
     function showToast(msg) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toastMsg').innerText = msg;
-      toast.classList.remove('translate-x-full');
+      const toast = document.getElementById('switchToast');
+      const toastMsg = document.getElementById('toastMessage');
+      
+      toastMsg.innerText = msg;
+      toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
       setTimeout(() => {
-        toast.classList.add('translate-x-full');
-      }, 3500);
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 4500);
     }
 
+    // Modal Operations
     function openModal() {
       document.getElementById('programForm').reset();
       document.getElementById('programId').value = '';
-      document.getElementById('modalTitle').innerText = 'Adicionar Novo Horário';
+      document.getElementById('modalTitle').innerText = 'Adicionar Bloco de Horário';
       document.getElementById('modal').classList.remove('hidden');
     }
 
@@ -414,7 +555,7 @@
       localStorage.setItem('yt_schedule', JSON.stringify(schedule));
       closeModal();
       renderSchedule();
-      selectProgram(id, true);
+      checkScheduleAndAutoSwitch(false);
     }
 
     function editProgram(id) {
@@ -427,17 +568,16 @@
       document.getElementById('inputEndTime').value = item.endTime;
       document.getElementById('inputHandle').value = item.handle;
 
-      document.getElementById('modalTitle').innerText = 'Editar Horário';
+      document.getElementById('modalTitle').innerText = 'Editar Bloco';
       document.getElementById('modal').classList.remove('hidden');
     }
 
     function deleteProgram(id) {
-      if (confirm('Deseja remover este bloco da programação?')) {
+      if (confirm('Deseja realmente remover este bloco da programação?')) {
         schedule = schedule.filter(p => p.id !== id);
         localStorage.setItem('yt_schedule', JSON.stringify(schedule));
         if (activeProgramId === id) activeProgramId = null;
         renderSchedule();
-        checkCurrentTimeSlot();
       }
     }
   </script>
