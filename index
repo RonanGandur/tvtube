@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Programador de Vídeos YouTube</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .active-card {
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-20 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-red-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+    <i data-lucide="radio" class="w-5 h-5 animate-pulse"></i>
+    <span id="toastMsg" class="text-sm font-semibold">Mudança de canal programada!</span>
+  </div>
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-red-600 p-2.5 rounded-xl text-white shadow-lg shadow-red-600/30">
+          <i data-lucide="tv" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+            Programador de Vídeos YouTube
+          </h1>
+          <p class="text-xs text-slate-400">Troca Automática de Canais em Tempo Real</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 bg-slate-950 px-4 py-2 rounded-2xl border border-slate-800">
+        <!-- Switch Troca Automática -->
+        <button id="toggleAutoSwitchBtn" onclick="toggleAutoSwitch()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 hover:bg-emerald-900/50 transition">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping" id="autoSwitchPing"></span>
+          <span id="autoSwitchStatusText">Troca Automática: LIGADA</span>
+        </button>
+
+        <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
+
+        <!-- Relógio -->
+        <div class="flex items-center gap-2 text-red-500 font-mono font-bold text-base" id="liveClock">
+          <i data-lucide="clock" class="w-4 h-4"></i>
+          <span>00:00:00</span>
+        </div>
+
+        <button onclick="openModal()" class="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition ml-2">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Novo Bloco
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Principal -->
+  <main class="max-w-7xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+    
+    <!-- Player Secção -->
+    <section class="lg:col-span-2 flex flex-col gap-4">
+      <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl flex flex-col">
+        
+        <!-- Frame do Player -->
+        <div class="relative w-full aspect-video bg-black" id="playerWrapper">
+          <iframe id="ytIframe" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+
+        <!-- Informação do Canal -->
+        <div class="p-4 md:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border-t border-slate-800">
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span id="liveBadge" class="hidden bg-red-600 text-white text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> NO AR
+              </span>
+              <span id="currentTimeBadge" class="text-xs text-slate-400 font-medium">--:--</span>
+            </div>
+            <h2 id="currentTitle" class="text-lg font-bold text-white">A carregar canal...</h2>
+            <p id="currentChannelHandle" class="text-xs text-slate-400 mt-0.5">@canal</p>
+          </div>
+
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <a id="btnDirectVideo" href="#" target="_blank" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shadow-lg shadow-red-600/20">
+              <i data-lucide="play-circle" class="w-4 h-4"></i>
+              Abrir no YouTube
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Lista da Programação -->
+    <section class="flex flex-col gap-4">
+      <div class="flex justify-between items-center px-1">
+        <h3 class="text-base font-bold flex items-center gap-2 text-slate-200">
+          <i data-lucide="calendar" class="w-4 h-4 text-red-500"></i>
+          Programação de Hoje
+        </h3>
+        <span class="text-xs text-slate-500" id="totalPrograms">0 blocos</span>
+      </div>
+
+      <div id="programList" class="flex flex-col gap-3 max-h-[680px] overflow-y-auto pr-1">
+        <!-- Cards dinâmicos -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Adicionar/Editar -->
+  <div id="modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2" id="modalTitle">
+        <i data-lucide="plus-circle" class="text-red-500 w-5 h-5"></i>
+        Adicionar Novo Horário
+      </h3>
+
+      <form id="programForm" onsubmit="saveProgram(event)" class="flex flex-col gap-4">
+        <input type="hidden" id="programId">
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Título / Nome do Bloco</label>
+          <input type="text" id="inputTitle" placeholder="Ex: Reflexão da Manhã" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Horário Início</label>
+            <input type="time" id="inputStartTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Horário Fim</label>
+            <input type="time" id="inputEndTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Handle do Canal ou ID/Link do Vídeo</label>
+          <input type="text" id="inputHandle" placeholder="reflexaominuto OU link do vídeo" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+          <p class="text-[11px] text-slate-500 mt-1">Pode colocar o handle (ex: <b>reflexaominuto</b>), o ID do vídeo ou o link do YouTube direto.</p>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-2">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold">
+            Guardar Programação
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const defaultPrograms = [
+      { id: '1', title: 'Espiritualidade & Reflexão', startTime: '06:00', endTime: '07:00', handle: 'reflexaominuto' },
+      { id: '2', title: 'Notícias Internacionais', startTime: '07:00', endTime: '08:30', handle: 'BBCNewsBrasil' },
+      { id: '3', title: 'Ciência & Tecnologia', startTime: '12:00', endTime: '13:00', handle: 'AtilaIamarino' }
+    ];
+
+    let schedule = JSON.parse(localStorage.getItem('yt_schedule')) || defaultPrograms;
+    let activeProgramId = null;
+    let autoSwitchEnabled = true;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      updateClock();
+      setInterval(updateClock, 1000);
+      renderSchedule();
+      checkCurrentTimeSlot();
+    });
+
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('pt-PT');
+      document.getElementById('liveClock').querySelector('span').innerText = timeStr;
+
+      if (autoSwitchEnabled) {
+        checkCurrentTimeSlot();
+      }
+    }
+
+    function toggleAutoSwitch() {
+      autoSwitchEnabled = !autoSwitchEnabled;
+      const btn = document.getElementById('toggleAutoSwitchBtn');
+      const ping = document.getElementById('autoSwitchPing');
+      const txt = document.getElementById('autoSwitchStatusText');
+
+      if (autoSwitchEnabled) {
+        btn.className = "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 hover:bg-emerald-900/50 transition";
+        ping.className = "w-2 h-2 rounded-full bg-emerald-500 animate-ping";
+        txt.innerText = "Troca Automática: LIGADA";
+        checkCurrentTimeSlot();
+      } else {
+        btn.className = "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition";
+        ping.className = "w-2 h-2 rounded-full bg-slate-500";
+        txt.innerText = "Troca Automática: DESLIGADA";
+      }
+    }
+
+    function renderSchedule() {
+      const list = document.getElementById('programList');
+      list.innerHTML = '';
+
+      schedule.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      document.getElementById('totalPrograms').innerText = `${schedule.length} bloco(s)`;
+
+      schedule.forEach(item => {
+        const card = document.createElement('div');
+        const isActive = item.id === activeProgramId;
+
+        card.className = `bg-slate-900 border ${isActive ? 'active-card bg-slate-900/90' : 'border-slate-800'} rounded-xl p-4 flex flex-col gap-3 transition hover:border-slate-700`;
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-xs font-semibold ${isActive ? 'text-red-400 bg-red-950/80 border-red-800' : 'text-slate-400 bg-slate-950 border-slate-800'} border px-2 py-0.5 rounded-md">
+                ${item.startTime} - ${item.endTime}
+              </span>
+              <h4 class="font-bold text-sm text-white mt-2">${item.title}</h4>
+              <p class="text-xs text-slate-400">${item.handle.startsWith('http') || item.handle.length === 11 ? 'Vídeo Direto' : '@' + item.handle.replace('@', '')}</p>
+            </div>
+            <div class="flex items-center gap-1">
+              <button onclick="editProgram('${item.id}')" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteProgram('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="selectProgram('${item.id}', true)" class="flex-1 ${isActive ? 'bg-red-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} text-xs py-2 rounded-xl font-medium flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="${isActive ? 'radio' : 'play'}" class="w-3.5 h-3.5"></i> 
+              ${isActive ? 'Tocando Agora' : 'Sintonizar Canal'}
+            </button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    // Extrai o ID do vídeo de um link ou devolve o próprio ID se já for válido
+    function extractVideoId(input) {
+      if (!input) return null;
+      input = input.trim();
+      
+      // Se for um link do YouTube (watch?v=... ou youtu.be/...)
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = input.match(regExp);
+
+      if (match && match[2].length === 11) {
+        return match[2];
+      }
+      
+      // Se já for diretamente um Video ID de 11 caracteres
+      if (input.length === 11 && !input.includes('@') && !input.includes('.')) {
+        return input;
+      }
+
+      return null;
+    }
+
+    // Consulta API pública e rápida sem CORS (Invidious) para obter o último vídeo do canal
+    async function fetchLatestVideoFromInvidious(handle) {
+      const cleanHandle = handle.replace('@', '').trim();
+
+      const instances = [
+        `https://inv.nadeko.net/api/v1/channels/handle/${cleanHandle}`,
+        `https://invidious.nerdvpn.de/api/v1/channels/handle/${cleanHandle}`
+      ];
+
+      for (const apiUrl of instances) {
+        try {
+          const res = await fetch(apiUrl);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.latestVideos && data.latestVideos.length > 0) {
+              return data.latestVideos[0].videoId;
+            }
+          }
+        } catch (e) {
+          console.warn("Erro ao contactar instância Invidious:", e);
+        }
+      }
+
+      return null;
+    }
+
+    async function selectProgram(id, forceUserSelect = false) {
+      if (activeProgramId === id && !forceUserSelect) return;
+
+      activeProgramId = id;
+      const item = schedule.find(p => p.id === id);
+      if (!item) return;
+
+      renderSchedule();
+
+      document.getElementById('currentTitle').innerText = item.title;
+      document.getElementById('currentTimeBadge').innerText = `${item.startTime} - ${item.endTime}`;
+      document.getElementById('liveBadge').classList.remove('hidden');
+
+      const btnDirect = document.getElementById('btnDirectVideo');
+      const iframe = document.getElementById('ytIframe');
+
+      // 1. Verifica se o utilizador forneceu um link ou ID de vídeo direto
+      let videoId = extractVideoId(item.handle);
+
+      if (!videoId) {
+        // 2. Se for um handle de canal, tenta ir buscar o último vídeo via API sem CORS
+        const cleanHandle = item.handle.replace('@', '');
+        document.getElementById('currentChannelHandle').innerText = `@${cleanHandle}`;
+        
+        videoId = await fetchLatestVideoFromInvidious(cleanHandle);
+      } else {
+        document.getElementById('currentChannelHandle').innerText = `ID: ${videoId}`;
+      }
+
+      if (videoId) {
+        btnDirect.href = `https://www.youtube.com/watch?v=${videoId}`;
+        iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
+      } else {
+        // Se falhar a busca do handle, redireciona o botão e carrega página informativa
+        const cleanHandle = item.handle.replace('@', '');
+        btnDirect.href = `https://www.youtube.com/@${cleanHandle}/videos`;
+        iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=PLrEnWoR732-BHrPp_C4J8A25IOfI9J6_Y`;
+      }
+
+      showToast(`Sintonizado: ${item.title}`);
+    }
+
+    function checkCurrentTimeSlot() {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+      let currentSlot = null;
+
+      for (const item of schedule) {
+        const [sH, sM] = item.startTime.split(':').map(Number);
+        const [eH, eM] = item.endTime.split(':').map(Number);
+        const startTotal = sH * 60 + sM;
+        const endTotal = eH * 60 + eM;
+
+        if (currentMinutes >= startTotal && currentMinutes < endTotal) {
+          currentSlot = item;
+          break;
+        }
+      }
+
+      if (currentSlot) {
+        if (activeProgramId !== currentSlot.id) {
+          selectProgram(currentSlot.id);
+        }
+      } else if (!activeProgramId && schedule.length > 0) {
+        selectProgram(schedule[0].id);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('translate-x-full');
+      setTimeout(() => {
+        toast.classList.add('translate-x-full');
+      }, 3500);
+    }
+
+    function openModal() {
+      document.getElementById('programForm').reset();
+      document.getElementById('programId').value = '';
+      document.getElementById('modalTitle').innerText = 'Adicionar Novo Horário';
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    function saveProgram(e) {
+      e.preventDefault();
+      const id = document.getElementById('programId').value || Date.now().toString();
+      const title = document.getElementById('inputTitle').value;
+      const startTime = document.getElementById('inputStartTime').value;
+      const endTime = document.getElementById('inputEndTime').value;
+      const handle = document.getElementById('inputHandle').value;
+
+      const existingIndex = schedule.findIndex(p => p.id === id);
+      const newProgram = { id, title, startTime, endTime, handle };
+
+      if (existingIndex >= 0) {
+        schedule[existingIndex] = newProgram;
+      } else {
+        schedule.push(newProgram);
+      }
+
+      localStorage.setItem('yt_schedule', JSON.stringify(schedule));
+      closeModal();
+      renderSchedule();
+      selectProgram(id, true);
+    }
+
+    function editProgram(id) {
+      const item = schedule.find(p => p.id === id);
+      if (!item) return;
+
+      document.getElementById('programId').value = item.id;
+      document.getElementById('inputTitle').value = item.title;
+      document.getElementById('inputStartTime').value = item.startTime;
+      document.getElementById('inputEndTime').value = item.endTime;
+      document.getElementById('inputHandle').value = item.handle;
+
+      document.getElementById('modalTitle').innerText = 'Editar Horário';
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function deleteProgram(id) {
+      if (confirm('Deseja remover este bloco da programação?')) {
+        schedule = schedule.filter(p => p.id !== id);
+        localStorage.setItem('yt_schedule', JSON.stringify(schedule));
+        if (activeProgramId === id) activeProgramId = null;
+        renderSchedule();
+        checkCurrentTimeSlot();
+      }
+    }
+  </script>
+</body>
+</html>
